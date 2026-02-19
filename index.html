@@ -1,311 +1,365 @@
-import React, { useState } from 'react';
-import { 
-  Flame, Droplets, Dumbbell, Activity, 
-  CheckCircle2, Wind
-} from 'lucide-react';
-
-// --- Configuration & Constants ---
-const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat', 'Sun'];
-const MIN_CALS = 2525; // Floor: 89g Fat, 300g Carbs, 131g Protein
-const MAX_CALS = 4500;
-const BJJ_DEFAULT_CALS = 3197; // Hits exactly: 169g Pro, 430g Carbs, 89g Fat
-const REST_DEFAULT_CALS = 2800;
-
-// --- Helper Functions ---
-/**
- * Calculates macros based on strict physiological constraints:
- * 1. Fat is hard-locked at 89g for hormonal baseline.
- * 2. Protein floor is 1.4g/kg (131g). Calories first fill protein up to 169g.
- * 3. Carbohydrate floor is 300g (CNS & 20k steps). All remaining calories go here.
- */
-const calculateMacros = (cals) => {
-  const fat = 89; 
-  let availableCals = cals - (fat * 9);
-  
-  let carbs = 300;
-  let protein = 131; 
-  
-  let remainingCals = availableCals - (carbs * 4) - (protein * 4);
-  
-  // 1. Prioritize filling protein up to the 169g target
-  const proteinDeficit = 169 - 131; 
-  if (remainingCals > 0) {
-    let proteinToAdd = Math.min(proteinDeficit, Math.floor(remainingCals / 4));
-    protein += proteinToAdd;
-    remainingCals -= (proteinToAdd * 4);
-  }
-  
-  // 2. Pour all remaining energy into carbohydrates
-  if (remainingCals > 0) {
-    carbs += Math.floor(remainingCals / 4);
-  }
-
-  return { protein, carbs, fat };
-};
-
-// --- Sub-Components ---
-
-const MacroRow = ({ label, amount, colorClass, statusText, statusColor }) => (
-  <div className="bg-[#161726] p-4 rounded-2xl border border-[#2a2b42] flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className={`w-3 h-3 rounded-full ${colorClass}`}></div>
-      <div>
-        <span className="font-bold block text-white">{label}</span>
-        <span className={`text-xs ${statusColor}`}>{statusText}</span>
-      </div>
-    </div>
-    <span className={`text-xl font-bold ${label === 'Fats' ? 'text-[#8c8d9f]' : 'text-white'}`}>
-      {amount}g
-    </span>
-  </div>
-);
-
-const ProtocolCard = ({ title, desc, icon: Icon, colorHex, details }) => (
-  <div className={`bg-[#1e1f35] rounded-3xl p-5 md:p-6 border border-[#2a2b42] transition-colors hover:border-[${colorHex}]/50`}>
-    <div className={`bg-[${colorHex}]/10 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-[${colorHex}]`}>
-      <Icon size={24} color={colorHex} />
-    </div>
-    <h3 className="text-xl font-bold mb-2">{title}</h3>
-    <p className="text-sm text-[#8c8d9f] mb-6 leading-relaxed">{desc}</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mike's Action Plan</title>
     
-    <div className="bg-[#161726] p-4 md:p-5 rounded-2xl space-y-4 text-sm border border-[#2a2b42]">
-      {details.map((detail, idx) => (
-        <div key={idx} className="flex gap-3">
-          <CheckCircle2 size={18} color={colorHex} className="shrink-0" />
-          <div>
-            <strong className="block text-white mb-1">{detail.label}</strong>
-            <span className="text-[#8c8d9f]">{detail.text}</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-// --- Main Application ---
-export default function App() {
-  const [schedule, setSchedule] = useState({
-    Mon: true, Tue: false, Wed: true, Thr: false, Fri: true, Sat: false, Sun: false
-  });
-  const [selectedDay, setSelectedDay] = useState('Mon');
-  const [dailyCalories, setDailyCalories] = useState({
-    Mon: BJJ_DEFAULT_CALS, Tue: REST_DEFAULT_CALS, Wed: BJJ_DEFAULT_CALS, 
-    Thr: REST_DEFAULT_CALS, Fri: BJJ_DEFAULT_CALS, Sat: REST_DEFAULT_CALS, Sun: REST_DEFAULT_CALS
-  });
-
-  const isBjj = schedule[selectedDay];
-  const currentCals = dailyCalories[selectedDay];
-  const macros = calculateMacros(currentCals);
-
-  const toggleBjjDay = () => {
-    setSchedule(prev => {
-      const newStatus = !prev[selectedDay];
-      setDailyCalories(cals => ({
-        ...cals,
-        [selectedDay]: newStatus ? BJJ_DEFAULT_CALS : REST_DEFAULT_CALS
-      }));
-      return { ...prev, [selectedDay]: newStatus };
-    });
-  };
-
-  const handleCalorieChange = (e) => {
-    setDailyCalories(prev => ({
-      ...prev,
-      [selectedDay]: parseInt(e.target.value)
-    }));
-  };
-
-  return (
-    <div className="min-h-screen bg-[#161726] text-white font-sans selection:bg-[#6c5dd3] selection:text-white pb-20">
-      
-      {/* Header Profile */}
-      <header className="w-full bg-[#1e1f35] border-b border-[#2a2b42] pt-10 pb-6 px-4 md:px-6 shadow-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto flex flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight mb-1 md:mb-2">Mike Carrick</h1>
-            <p className="text-[#8c8d9f] text-xs md:text-sm flex items-center gap-1.5 md:gap-2 font-medium">
-              <Activity size={16} className="text-[#ff754c] shrink-0" />
-              <span className="truncate">93kg | Fat Loss | 20k Steps</span>
-            </p>
-          </div>
-          <div className="bg-[#161726] px-4 py-2 md:px-5 md:py-3 rounded-2xl border border-[#2a2b42] flex items-center gap-3 md:gap-4 shrink-0">
-            <div className="hidden md:flex w-10 h-10 rounded-full bg-gradient-to-br from-[#6c5dd3] to-[#4a3f9e] items-center justify-center font-bold text-sm shadow-lg shadow-[#6c5dd3]/30">
-              MC
-            </div>
-            <div className="text-right md:text-left">
-              <p className="text-[10px] md:text-xs text-[#8c8d9f] uppercase tracking-wider font-semibold">Weekly</p>
-              <p className="font-bold text-sm md:text-base">{Object.values(schedule).filter(Boolean).length} BJJ Days</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 md:px-6 mt-6 md:mt-8 space-y-6 md:space-y-8">
+    <style>
+        /* Custom styles for native mobile scrollbar hiding */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        {/* Day Selector Component */}
-        <section className="bg-[#1e1f35] rounded-3xl p-5 md:p-8 border border-[#2a2b42] shadow-sm">
-          <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6">Select Training Day</h2>
-          <div 
-            className="flex justify-start md:justify-between items-center overflow-x-auto pb-2 gap-3"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }} // Native scrollbar hide for mobile
-          >
-            {WEEK_DAYS.map((day) => (
-              <button 
-                key={day} 
-                onClick={() => setSelectedDay(day)}
-                className={`flex flex-col items-center min-w-[65px] md:min-w-[75px] p-3 md:p-4 rounded-2xl transition-all duration-300 shrink-0 ${
-                  selectedDay === day 
-                    ? 'bg-[#6c5dd3] shadow-lg shadow-[#6c5dd3]/30 border-transparent scale-105' 
-                    : 'bg-[#161726] border border-[#2a2b42] text-[#8c8d9f] active:scale-95'
-                }`}
-              >
-                <span className="text-xs md:text-sm font-bold uppercase mb-2 md:mb-3 pointer-events-none">{day}</span>
-                <div className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full ${schedule[day] ? (selectedDay === day ? 'bg-white' : 'bg-[#ff754c]') : 'bg-transparent border-2 border-current opacity-30'}`}></div>
-              </button>
-            ))}
-          </div>
-        </section>
+        /* Smooth slider styling */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #6c5dd3;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(108, 93, 211, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-[#161726] text-white font-sans selection:bg-[#6c5dd3] selection:text-white pb-20">
+    <div id="root"></div>
 
-        {/* Daily Context & Macro Adjuster */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          
-          {/* Day Context & Toggle */}
-          <div className="bg-[#1e1f35] rounded-3xl p-6 md:p-8 border border-[#2a2b42] relative overflow-hidden flex flex-col shadow-sm">
-            <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 transition-colors duration-700 pointer-events-none ${isBjj ? 'bg-[#ff754c]/20' : 'bg-[#00c48c]/20'}`}></div>
+    <script type="text/babel">
+        const { useState } = React;
+
+        // --- Inline SVG Icons (Replacing Lucide dependencies for standalone HTML) ---
+        const ActivityIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        );
+        const DropletsIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7 6.3 7 6.3s-2.29 2.76-3.29 3.69C2.57 10.92 2 12.02 2 13.18 2 15.4 3.8 17.23 6 17.23c.34 0 .67-.04 1-.13z"/><path d="M17.5 21c2.49 0 4.5-2.01 4.5-4.5 0-1.3-.64-2.5-1.92-3.53C18.8 11.94 17.5 9 17.5 9s-2.58 3.06-3.7 4.09C12.52 14.12 11.88 15.32 11.88 16.63c0 2.49 2.01 4.5 4.5 4.5z"/></svg>
+        );
+        const FlameIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        );
+        const DumbbellIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m14.4 14.4 5.2-5.2"/><path d="M22.2 12.8 16 6.6"/><path d="m12.8 22.2-6.2-6.2"/><path d="M9.6 9.6 4.4 4.4"/><path d="M4.4 19.6 9.6 14.4"/><path d="m19.6 4.4-5.2 5.2"/></svg>
+        );
+        const WindIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/></svg>
+        );
+        const CheckCircleIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        );
+
+        // --- Configuration & Constants ---
+        const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat', 'Sun'];
+        const MIN_CALS = 2525; // Floor: 89g Fat, 300g Carbs, 131g Protein
+        const MAX_CALS = 4500;
+        const BJJ_DEFAULT_CALS = 3197; // Hits exactly: 169g Pro, 430g Carbs, 89g Fat
+        const REST_DEFAULT_CALS = 2800;
+
+        // --- Macro Calculation Logic ---
+        const calculateMacros = (cals) => {
+            const fat = 89; 
+            let availableCals = cals - (fat * 9);
             
-            <div className="relative z-10 mb-4 md:mb-6">
-              <p className="text-[#6c5dd3] font-bold tracking-wide uppercase text-xs md:text-sm mb-1">{selectedDay} OVERVIEW</p>
-              <h2 className="text-2xl md:text-3xl font-extrabold">{isBjj ? 'Grappling Day' : 'Strength & Recovery'}</h2>
+            let carbs = 300;
+            let protein = 131; 
+            
+            let remainingCals = availableCals - (carbs * 4) - (protein * 4);
+            
+            // 1. Prioritize filling protein up to the 169g target
+            const proteinDeficit = 169 - 131; 
+            if (remainingCals > 0) {
+                let proteinToAdd = Math.min(proteinDeficit, Math.floor(remainingCals / 4));
+                protein += proteinToAdd;
+                remainingCals -= (proteinToAdd * 4);
+            }
+            
+            // 2. Pour all remaining energy into carbohydrates
+            if (remainingCals > 0) {
+                carbs += Math.floor(remainingCals / 4);
+            }
+
+            return { protein, carbs, fat };
+        };
+
+        // --- Sub-Components ---
+        const MacroRow = ({ label, amount, colorClass, statusText, statusColor }) => (
+            <div className="bg-[#161726] p-4 rounded-2xl border border-[#2a2b42] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${colorClass}`}></div>
+                    <div>
+                        <span className="font-bold block text-white">{label}</span>
+                        <span className={`text-xs ${statusColor}`}>{statusText}</span>
+                    </div>
+                </div>
+                <span className={`text-xl font-bold ${label === 'Fats' ? 'text-[#8c8d9f]' : 'text-white'}`}>
+                    {amount}g
+                </span>
             </div>
+        );
 
-            <div className="text-[#a5a6c1] text-sm md:text-base leading-relaxed mb-8 relative z-10 flex-1">
-              {isBjj ? (
-                <p>
-                  <strong className="text-white">High energy demand.</strong> Your 20,000 steps combined with BJJ creates massive friction. If you restrict carbs today, your body will rapidly spike cortisol to scavenge for energy, halting fat loss and risking muscle breakdown.
-                </p>
-              ) : (
-                <p>
-                  <strong className="text-white">CNS recovery focus.</strong> No mats today, but you are still accumulating 20,000 steps. You cannot drop carbohydrates below 300g without triggering a stress response. Adjust the slider to create a mild caloric deficit.
-                </p>
-              )}
+        const ProtocolCard = ({ title, desc, icon: Icon, colorHex, details }) => (
+            <div className="bg-[#1e1f35] rounded-3xl p-5 md:p-6 border border-[#2a2b42] transition-colors hover:border-[#6c5dd3]/50 h-full flex flex-col">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${colorHex}15`, color: colorHex }}>
+                        <Icon size={24} color={colorHex} />
+                    </div>
+                    <h3 className="text-xl font-bold">{title}</h3>
+                </div>
+                <p className="text-sm text-[#8c8d9f] mb-6 leading-relaxed flex-1">{desc}</p>
+                
+                <div className="bg-[#161726] p-4 md:p-5 rounded-2xl space-y-4 text-sm border border-[#2a2b42]">
+                    {details.map((detail, idx) => (
+                        <div key={idx} className="flex gap-3">
+                            <CheckCircleIcon size={18} color={colorHex} className="shrink-0 mt-0.5" />
+                            <div>
+                                <strong className="block text-white mb-1">{detail.label}</strong>
+                                <span className="text-[#8c8d9f] leading-snug block">{detail.text}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
+        );
 
-            <div className="bg-[#161726] p-4 md:p-5 rounded-2xl border border-[#2a2b42] relative z-10 flex items-center justify-between mt-auto">
-              <div>
-                <p className="font-bold text-sm md:text-base">Training BJJ today?</p>
-                <p className="text-[11px] md:text-xs text-[#8c8d9f]">Recalculates baseline targets.</p>
-              </div>
-              <button 
-                onClick={toggleBjjDay}
-                className={`relative w-14 h-7 md:w-16 md:h-8 rounded-full transition-colors duration-300 ease-in-out focus:outline-none ${isBjj ? 'bg-[#ff754c]' : 'bg-[#2a2b42]'}`}
-              >
-                <div className={`absolute top-1 left-1 bg-white w-5 h-5 md:w-6 md:h-6 rounded-full transition-transform duration-300 ease-in-out ${isBjj ? 'transform translate-x-7 md:translate-x-8' : ''}`}></div>
-              </button>
-            </div>
-          </div>
+        // --- Main Application ---
+        function App() {
+            const [schedule, setSchedule] = useState({
+                Mon: true, Tue: false, Wed: true, Thr: false, Fri: true, Sat: false, Sun: false
+            });
+            const [selectedDay, setSelectedDay] = useState('Mon');
+            const [dailyCalories, setDailyCalories] = useState({
+                Mon: BJJ_DEFAULT_CALS, Tue: REST_DEFAULT_CALS, Wed: BJJ_DEFAULT_CALS, 
+                Thr: REST_DEFAULT_CALS, Fri: BJJ_DEFAULT_CALS, Sat: REST_DEFAULT_CALS, Sun: REST_DEFAULT_CALS
+            });
 
-          {/* Macro Planner */}
-          <div className="bg-[#1e1f35] rounded-3xl p-6 md:p-8 border border-[#2a2b42] flex flex-col shadow-sm">
-            <h3 className="text-lg md:text-xl font-bold mb-2 flex items-center gap-2">
-              <Droplets className="text-[#6c5dd3]" size={20} />
-              Intake Adjuster
-            </h3>
-            <p className="text-xs md:text-sm text-[#8c8d9f] mb-6 md:mb-8">Slide to adjust your deficit/surplus. Constraints are mathematically locked to protect muscle.</p>
+            const isBjj = schedule[selectedDay];
+            const currentCals = dailyCalories[selectedDay];
+            const macros = calculateMacros(currentCals);
 
-            {/* Range Slider */}
-            <div className="mb-6 md:mb-8">
-              <div className="flex justify-between items-end mb-3 md:mb-4">
-                <span className="text-[#8c8d9f] text-sm md:text-base font-medium">Total Calories</span>
-                <span className="text-2xl md:text-3xl font-extrabold text-[#6c5dd3]">{currentCals} <span className="text-sm md:text-base text-[#8c8d9f] font-medium">kcal</span></span>
-              </div>
-              <input 
-                type="range" 
-                min={MIN_CALS} 
-                max={MAX_CALS} 
-                step="25" 
-                value={currentCals} 
-                onChange={handleCalorieChange} 
-                className="w-full h-2 md:h-3 bg-[#161726] rounded-lg appearance-none cursor-pointer accent-[#6c5dd3] touch-none"
-              />
-              <div className="flex justify-between mt-2 text-[10px] md:text-xs text-[#8c8d9f] font-medium">
-                <span>Min Cut ({MIN_CALS})</span>
-                <span>Surplus ({MAX_CALS})</span>
-              </div>
-            </div>
+            const toggleBjjDay = () => {
+                setSchedule(prev => {
+                    const newStatus = !prev[selectedDay];
+                    setDailyCalories(cals => ({
+                        ...cals,
+                        [selectedDay]: newStatus ? BJJ_DEFAULT_CALS : REST_DEFAULT_CALS
+                    }));
+                    return { ...prev, [selectedDay]: newStatus };
+                });
+            };
 
-            {/* Dynamic Macro Outputs */}
-            <div className="space-y-3 md:space-y-4">
-              <MacroRow 
-                label="Protein" 
-                amount={macros.protein} 
-                colorClass="bg-[#ff754c]"
-                statusText={macros.protein === 131 ? "Hitting 1.4g/kg floor" : macros.protein === 169 ? "Optimal target reached" : "Scaling to preserve mass"}
-                statusColor={macros.protein === 131 ? "text-[#ff754c]" : macros.protein === 169 ? "text-[#00c48c]" : "text-[#8c8d9f]"}
-              />
-              <MacroRow 
-                label="Carbohydrates" 
-                amount={macros.carbs} 
-                colorClass="bg-[#6c5dd3]"
-                statusText={macros.carbs === 300 ? "Locked at 300g floor" : "Fueling 20k steps + Output"}
-                statusColor={macros.carbs === 300 ? "text-[#ff754c]" : "text-[#00c48c]"}
-              />
-              <MacroRow 
-                label="Fats" 
-                amount={macros.fat} 
-                colorClass="bg-[#8c8d9f]"
-                statusText="Fixed for hormone baseline"
-                statusColor="text-[#8c8d9f]"
-              />
-            </div>
-          </div>
-        </section>
+            const handleCalorieChange = (e) => {
+                setDailyCalories(prev => ({
+                    ...prev,
+                    [selectedDay]: parseInt(e.target.value)
+                }));
+            };
 
-        {/* Workout Library (Dims out automatically on BJJ days to indicate rest) */}
-        <section className={`pt-4 md:pt-6 transition-all duration-500 ${isBjj ? 'opacity-50 grayscale hover:opacity-100 hover:grayscale-0' : 'opacity-100'}`}>
-          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-2">
-            <h2 className="text-xl md:text-2xl font-bold">Non-BJJ Action Plan</h2>
-            {isBjj && <span className="w-fit bg-[#2a2b42] text-[#8c8d9f] text-[10px] md:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Rest Day Overview</span>}
-          </div>
-          <p className="text-sm md:text-base text-[#8c8d9f] mb-6">Choose ONE protocol today. Do not mix them. Keep CNS fatigue low.</p>
+            return (
+                <div className="w-full">
+                    {/* Header Profile */}
+                    <header className="w-full bg-[#1e1f35] border-b border-[#2a2b42] pt-8 pb-6 px-4 md:px-6 shadow-sm sticky top-0 z-50">
+                        <div className="max-w-5xl mx-auto flex flex-row justify-between items-center gap-4">
+                            <div>
+                                <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight mb-1 md:mb-2">Mike's Action Plan</h1>
+                                <p className="text-[#8c8d9f] text-xs md:text-sm flex items-center gap-1.5 md:gap-2 font-medium">
+                                    <ActivityIcon size={16} color="#ff754c" className="shrink-0" />
+                                    <span className="truncate">93kg | Fat Loss | 20k Steps</span>
+                                </p>
+                            </div>
+                            <div className="bg-[#161726] px-4 py-2 md:px-5 md:py-3 rounded-2xl border border-[#2a2b42] flex items-center gap-3 md:gap-4 shrink-0">
+                                <div className="hidden md:flex w-10 h-10 rounded-full bg-gradient-to-br from-[#6c5dd3] to-[#4a3f9e] items-center justify-center font-bold text-sm shadow-lg shadow-[#6c5dd3]/30">
+                                    MC
+                                </div>
+                                <div className="text-right md:text-left">
+                                    <p className="text-[10px] md:text-xs text-[#8c8d9f] uppercase tracking-wider font-semibold">Weekly</p>
+                                    <p className="font-bold text-sm md:text-base">{Object.values(schedule).filter(Boolean).length} BJJ Days</p>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
-            <ProtocolCard 
-              title="Kettlebell AXE"
-              desc="Anti-glycolytic conditioning. Builds explosive power without lactic acid buildup so you are fresh for BJJ tomorrow."
-              icon={Flame}
-              colorHex="#ff754c"
-              details={[
-                { label: "Format", text: "EMOM for 15-20 minutes." },
-                { label: "Execution", text: "10 heavy Swings or Snatches." },
-                { label: "Rest", text: "Park the bell and walk it off." }
-              ]}
-            />
-            <ProtocolCard 
-              title="Heavy Ladders"
-              desc="Absolute strength focus. Heavy loads with low rep ranges to build dense muscle without frying your CNS."
-              icon={Dumbbell}
-              colorHex="#6c5dd3"
-              details={[
-                { label: "Structure", text: "Complete 3 to 5 total ladders." },
-                { label: "Movements", text: "KB Clean & Press or Front Squats." },
-                { label: "The Ladder", text: "1 rep (30s rest), 2 reps (45s rest), 3 reps." }
-              ]}
-            />
-            <ProtocolCard 
-              title="Supple Leopard"
-              desc="Mandatory joint maintenance. Undo the structural damage of grappling rounds and walking 20,000 steps."
-              icon={Wind}
-              colorHex="#00c48c"
-              details={[
-                { label: "Hips", text: "2 mins Couch Stretch per leg." },
-                { label: "Spine", text: "Foam roll Thoracic spine." },
-                { label: "Regulation", text: "5 mins strict nasal breathing, legs elevated." }
-              ]}
-            />
-          </div>
-        </section>
+                    <main className="max-w-5xl mx-auto px-4 md:px-6 mt-6 md:mt-8 space-y-6 md:space-y-8">
+                        
+                        {/* Day Selector Component */}
+                        <section className="bg-[#1e1f35] rounded-3xl p-5 md:p-8 border border-[#2a2b42] shadow-sm">
+                            <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6">Select Training Day</h2>
+                            <div className="flex justify-start md:justify-between items-center overflow-x-auto pb-2 gap-3 hide-scrollbar">
+                                {WEEK_DAYS.map((day) => (
+                                    <button 
+                                        key={day} 
+                                        onClick={() => setSelectedDay(day)}
+                                        className={`flex flex-col items-center min-w-[65px] md:min-w-[75px] p-3 md:p-4 rounded-2xl transition-all duration-300 shrink-0 ${
+                                            selectedDay === day 
+                                                ? 'bg-[#6c5dd3] shadow-lg shadow-[#6c5dd3]/30 border-transparent scale-105' 
+                                                : 'bg-[#161726] border border-[#2a2b42] text-[#8c8d9f] active:scale-95'
+                                        }`}
+                                    >
+                                        <span className="text-xs md:text-sm font-bold uppercase mb-2 md:mb-3 pointer-events-none">{day}</span>
+                                        <div className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full ${schedule[day] ? (selectedDay === day ? 'bg-white' : 'bg-[#ff754c]') : 'bg-transparent border-2 border-current opacity-30'}`}></div>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
 
-      </main>
-    </div>
-  );
-}
+                        {/* Daily Context & Macro Adjuster */}
+                        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                            
+                            {/* Day Context & Toggle */}
+                            <div className="bg-[#1e1f35] rounded-3xl p-6 md:p-8 border border-[#2a2b42] relative overflow-hidden flex flex-col shadow-sm">
+                                <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 transition-colors duration-700 pointer-events-none ${isBjj ? 'bg-[#ff754c]/20' : 'bg-[#00c48c]/20'}`}></div>
+                                
+                                <div className="relative z-10 mb-4 md:mb-6">
+                                    <p className="text-[#6c5dd3] font-bold tracking-wide uppercase text-xs md:text-sm mb-1">{selectedDay} OVERVIEW</p>
+                                    <h2 className="text-2xl md:text-3xl font-extrabold">{isBjj ? 'Grappling Day' : 'Strength & Recovery'}</h2>
+                                </div>
+
+                                <div className="text-[#a5a6c1] text-sm md:text-base leading-relaxed mb-8 relative z-10 flex-1">
+                                    {isBjj ? (
+                                        <p>
+                                            <strong className="text-white block mb-2">High energy demand.</strong> 
+                                            Your 20,000 steps combined with BJJ creates massive friction. If you restrict carbs today, your body will rapidly spike cortisol to scavenge for energy, halting fat loss and risking muscle breakdown. Keep carbs high to shield your physiology.
+                                        </p>
+                                    ) : (
+                                        <p>
+                                            <strong className="text-white block mb-2">CNS recovery focus.</strong> 
+                                            No mats today, but you are still accumulating 20,000 steps. You cannot drop carbohydrates below 300g without triggering a stress response. Adjust the slider to create a mild caloric deficit while prioritizing tissue repair.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="bg-[#161726] p-4 md:p-5 rounded-2xl border border-[#2a2b42] relative z-10 flex items-center justify-between mt-auto">
+                                    <div>
+                                        <p className="font-bold text-sm md:text-base text-white">Training BJJ today?</p>
+                                        <p className="text-[11px] md:text-xs text-[#8c8d9f] mt-0.5">Recalculates baseline targets.</p>
+                                    </div>
+                                    <button 
+                                        onClick={toggleBjjDay}
+                                        className={`relative w-14 h-7 md:w-16 md:h-8 rounded-full transition-colors duration-300 ease-in-out focus:outline-none ${isBjj ? 'bg-[#ff754c]' : 'bg-[#2a2b42]'}`}
+                                    >
+                                        <div className={`absolute top-1 left-1 bg-white w-5 h-5 md:w-6 md:h-6 rounded-full transition-transform duration-300 ease-in-out ${isBjj ? 'transform translate-x-7 md:translate-x-8' : ''}`}></div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Macro Planner */}
+                            <div className="bg-[#1e1f35] rounded-3xl p-6 md:p-8 border border-[#2a2b42] flex flex-col shadow-sm">
+                                <h3 className="text-lg md:text-xl font-bold mb-2 flex items-center gap-2">
+                                    <DropletsIcon size={20} color="#6c5dd3" />
+                                    Intake Adjuster
+                                </h3>
+                                <p className="text-xs md:text-sm text-[#8c8d9f] mb-6 md:mb-8">Slide to adjust your deficit/surplus. Constraints are mathematically locked to protect muscle.</p>
+
+                                {/* Range Slider */}
+                                <div className="mb-6 md:mb-8">
+                                    <div className="flex justify-between items-end mb-3 md:mb-4">
+                                        <span className="text-[#8c8d9f] text-sm md:text-base font-medium">Total Calories</span>
+                                        <span className="text-2xl md:text-3xl font-extrabold text-[#6c5dd3]">{currentCals} <span className="text-sm md:text-base text-[#8c8d9f] font-medium">kcal</span></span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min={MIN_CALS} 
+                                        max={MAX_CALS} 
+                                        step="25" 
+                                        value={currentCals} 
+                                        onChange={handleCalorieChange} 
+                                        className="w-full h-2 md:h-3 bg-[#161726] rounded-lg appearance-none cursor-pointer outline-none"
+                                    />
+                                    <div className="flex justify-between mt-3 text-[10px] md:text-xs text-[#8c8d9f] font-medium uppercase tracking-wider">
+                                        <span>Min Cut ({MIN_CALS})</span>
+                                        <span>Surplus ({MAX_CALS})</span>
+                                    </div>
+                                </div>
+
+                                {/* Dynamic Macro Outputs */}
+                                <div className="space-y-3 md:space-y-4">
+                                    <MacroRow 
+                                        label="Protein" 
+                                        amount={macros.protein} 
+                                        colorClass="bg-[#ff754c]"
+                                        statusText={macros.protein === 131 ? "Hitting 1.4g/kg floor" : macros.protein === 169 ? "Optimal target reached" : "Scaling to preserve mass"}
+                                        statusColor={macros.protein === 131 ? "text-[#ff754c]" : macros.protein === 169 ? "text-[#00c48c]" : "text-[#8c8d9f]"}
+                                    />
+                                    <MacroRow 
+                                        label="Carbohydrates" 
+                                        amount={macros.carbs} 
+                                        colorClass="bg-[#6c5dd3]"
+                                        statusText={macros.carbs === 300 ? "Locked at 300g floor" : "Fueling 20k steps + Output"}
+                                        statusColor={macros.carbs === 300 ? "text-[#ff754c]" : "text-[#00c48c]"}
+                                    />
+                                    <MacroRow 
+                                        label="Fats" 
+                                        amount={macros.fat} 
+                                        colorClass="bg-[#8c8d9f]"
+                                        statusText="Fixed for hormone baseline"
+                                        statusColor="text-[#8c8d9f]"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Workout Library (Dims out automatically on BJJ days to indicate rest) */}
+                        <section className={`pt-4 md:pt-6 transition-all duration-500 ${isBjj ? 'opacity-50 grayscale hover:opacity-100 hover:grayscale-0' : 'opacity-100'}`}>
+                            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-3">
+                                <h2 className="text-xl md:text-2xl font-bold">Non-BJJ Action Plan</h2>
+                                {isBjj && <span className="w-fit bg-[#2a2b42] text-[#8c8d9f] text-[10px] md:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Rest Day Overview</span>}
+                            </div>
+                            <p className="text-sm md:text-base text-[#8c8d9f] mb-6">Choose ONE protocol today. Do not mix them. Keep CNS fatigue low.</p>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
+                                <ProtocolCard 
+                                    title="Kettlebell AXE"
+                                    desc="Anti-glycolytic conditioning based on Pavel Tsatsouline's protocols. Builds explosive power without lactic acid buildup so you are fresh for BJJ."
+                                    icon={FlameIcon}
+                                    colorHex="#ff754c"
+                                    details={[
+                                        { label: "Format", text: "EMOM for 15-20 minutes." },
+                                        { label: "Execution", text: "10 heavy Swings or Snatches." },
+                                        { label: "Rest", text: "Park the bell and walk it off." }
+                                    ]}
+                                />
+                                <ProtocolCard 
+                                    title="Heavy Ladders"
+                                    desc="Absolute strength focus. Heavy loads with low rep ranges to build dense muscle without frying your Central Nervous System."
+                                    icon={DumbbellIcon}
+                                    colorHex="#6c5dd3"
+                                    details={[
+                                        { label: "Structure", text: "Complete 3 to 5 total ladders." },
+                                        { label: "Movements", text: "KB Clean & Press or Front Squats." },
+                                        { label: "The Ladder", text: "1 rep (30s rest), 2 reps (45s rest), 3 reps." }
+                                    ]}
+                                />
+                                <ProtocolCard 
+                                    title="Supple Leopard"
+                                    desc="Mandatory joint maintenance. Undo the structural damage of grappling rounds and walking 20,000 steps using Kelly Starrett's methods."
+                                    icon={WindIcon}
+                                    colorHex="#00c48c"
+                                    details={[
+                                        { label: "Hips", text: "2 mins Couch Stretch per leg." },
+                                        { label: "Spine", text: "Foam roll Thoracic spine." },
+                                        { label: "Regulation", text: "5 mins strict nasal breathing, legs elevated." }
+                                    ]}
+                                />
+                            </div>
+                        </section>
+
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
