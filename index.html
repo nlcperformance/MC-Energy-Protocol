@@ -58,6 +58,12 @@
         const CheckCircleIcon = ({ size=24, className="", color="currentColor" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
         );
+        const ExternalLinkIcon = ({ size=24, className="", color="currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        );
+        const CheckMark = () => (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        );
 
         // --- Configuration & Constants ---
         const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thr', 'Fri', 'Sat', 'Sun'];
@@ -108,25 +114,27 @@
             </div>
         );
 
-        const ProtocolCard = ({ title, desc, icon: Icon, colorHex, details }) => (
-            <div className="bg-[#1e1f35] rounded-3xl p-5 md:p-6 border border-[#2a2b42] transition-colors hover:border-[#6c5dd3]/50 h-full flex flex-col">
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${colorHex}15`, color: colorHex }}>
-                        <Icon size={24} color={colorHex} />
+        const ChecklistItem = ({ text }) => {
+            const [checked, setChecked] = useState(false);
+            return (
+                <label className="flex gap-3 items-start cursor-pointer group" onClick={(e) => { e.preventDefault(); setChecked(!checked); }}>
+                    <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? 'bg-[#6c5dd3] border-[#6c5dd3]' : 'border-[#2a2b42] group-hover:border-[#6c5dd3]/50'}`}>
+                        {checked && <CheckMark />}
                     </div>
-                    <h3 className="text-xl font-bold">{title}</h3>
+                    <span className={`text-sm leading-snug transition-colors ${checked ? 'text-[#8c8d9f] line-through' : 'text-white'}`}>{text}</span>
+                </label>
+            );
+        };
+
+        const WorkoutBlock = ({ title, subtitle, items, colorHex }) => (
+            <div className="mb-6 last:mb-0">
+                <div className="flex flex-col mb-3">
+                    <h4 className="text-lg font-bold" style={{ color: colorHex }}>{title}</h4>
+                    {subtitle && <span className="text-xs text-[#8c8d9f] font-medium mt-1 leading-snug">{subtitle}</span>}
                 </div>
-                <p className="text-sm text-[#8c8d9f] mb-6 leading-relaxed flex-1">{desc}</p>
-                
-                <div className="bg-[#161726] p-4 md:p-5 rounded-2xl space-y-4 text-sm border border-[#2a2b42]">
-                    {details.map((detail, idx) => (
-                        <div key={idx} className="flex gap-3">
-                            <CheckCircleIcon size={18} color={colorHex} className="shrink-0 mt-0.5" />
-                            <div>
-                                <strong className="block text-white mb-1">{detail.label}</strong>
-                                <span className="text-[#8c8d9f] leading-snug block">{detail.text}</span>
-                            </div>
-                        </div>
+                <div className="bg-[#161726] p-4 md:p-5 rounded-2xl space-y-4 border border-[#2a2b42]">
+                    {items.map((item, idx) => (
+                        <ChecklistItem key={idx} text={item} />
                     ))}
                 </div>
             </div>
@@ -314,42 +322,165 @@
                                 <h2 className="text-xl md:text-2xl font-bold">Non-BJJ Action Plan</h2>
                                 {isBjj && <span className="w-fit bg-[#2a2b42] text-[#8c8d9f] text-[10px] md:text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">Rest Day Overview</span>}
                             </div>
-                            <p className="text-sm md:text-base text-[#8c8d9f] mb-6">Choose ONE protocol today. Do not mix them. Keep CNS fatigue low.</p>
+                            <p className="text-sm md:text-base text-[#8c8d9f] mb-6">Choose ONE session today based on your energy levels. Tap to check off sets as you go.</p>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
-                                <ProtocolCard 
-                                    title="Kettlebell AXE"
-                                    desc="Anti-glycolytic conditioning based on Pavel Tsatsouline's protocols. Builds explosive power without lactic acid buildup so you are fresh for BJJ."
-                                    icon={FlameIcon}
-                                    colorHex="#ff754c"
-                                    details={[
-                                        { label: "Format", text: "EMOM for 15-20 minutes." },
-                                        { label: "Execution", text: "10 heavy Swings or Snatches." },
-                                        { label: "Rest", text: "Park the bell and walk it off." }
-                                    ]}
-                                />
-                                <ProtocolCard 
-                                    title="Heavy Ladders"
-                                    desc="Absolute strength focus. Heavy loads with low rep ranges to build dense muscle without frying your Central Nervous System."
-                                    icon={DumbbellIcon}
-                                    colorHex="#6c5dd3"
-                                    details={[
-                                        { label: "Structure", text: "Complete 3 to 5 total ladders." },
-                                        { label: "Movements", text: "KB Clean & Press or Front Squats." },
-                                        { label: "The Ladder", text: "1 rep (30s rest), 2 reps (45s rest), 3 reps." }
-                                    ]}
-                                />
-                                <ProtocolCard 
-                                    title="Supple Leopard"
-                                    desc="Mandatory joint maintenance. Undo the structural damage of grappling rounds and walking 20,000 steps using Kelly Starrett's methods."
-                                    icon={WindIcon}
-                                    colorHex="#00c48c"
-                                    details={[
-                                        { label: "Hips", text: "2 mins Couch Stretch per leg." },
-                                        { label: "Spine", text: "Foam roll Thoracic spine." },
-                                        { label: "Regulation", text: "5 mins strict nasal breathing, legs elevated." }
-                                    ]}
-                                />
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                                {/* Session 1: Grapple Strength */}
+                                <div className="bg-[#1e1f35] rounded-3xl p-5 md:p-8 border border-[#2a2b42] flex flex-col shadow-sm">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#ff754c]/10 text-[#ff754c]">
+                                            <DumbbellIcon size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl md:text-2xl font-bold">Session 1 - Grapple Strength</h3>
+                                            <p className="text-sm text-[#8c8d9f]">Primary Strength & Armor Building</p>
+                                        </div>
+                                    </div>
+
+                                    <WorkoutBlock 
+                                        title="Warm up" 
+                                        colorHex="#ff754c"
+                                        items={[
+                                            "Walk outs x 20",
+                                            "Bird Dogs 4 each side x 15 seconds",
+                                            "Band pull aparts x 20",
+                                            "Plate or kettlebell halos 3 x 10 each side",
+                                            "Tib raises x 20",
+                                            "Single leg calf raises x 20"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="Strength" 
+                                        subtitle="3-5 sets, 2-5 reps • RPE 7-9 (Heavy) • Rest FOR AS LONG AS YOU NEED"
+                                        colorHex="#ff754c"
+                                        items={[
+                                            "Bottoms Up Kettlebell Cleans (try 16kg to start, if you can easily hold for 2 secs go heavier)",
+                                            "Weighted Pull Ups (start with 2-5kg and aim for doubles/2 reps)"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="Body Armour" 
+                                        subtitle="10 rounds • Lift powerfully for 20s • Flip a coin: Heads = Double Bells, Tails = Single Bell"
+                                        colorHex="#ff754c"
+                                        items={[
+                                            "2 swings, 2 press, 1 squat on start of the minute and end of the minute",
+                                            "Rest FOR AS LONG AS YOU NEED: 2 pistols squats each leg (right first, high seat no lower than parallel) then walk for the remaining"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="The Extras" 
+                                        subtitle="5 minutes • 'Simply' work continuously"
+                                        colorHex="#ff754c"
+                                        items={[
+                                            "30 second Neck Iso Hold (change position each round)",
+                                            "5 Kettlebell Sling Shots each side",
+                                            "Wind down: 1 to 5 mins breathing (No music or chill/calm only: 4s in via nose, 7s hold, 8s out via mouth like blowing through a straw)"
+                                        ]} 
+                                    />
+
+                                    <a href="https://tally.so/r/gDqYGd" target="_blank" rel="noreferrer" className="mt-4 md:mt-6 w-full flex items-center justify-center gap-2 bg-[#ff754c] hover:bg-[#e05f3b] text-white font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-[#ff754c]/20">
+                                        <ExternalLinkIcon size={20} />
+                                        Log Session
+                                    </a>
+                                </div>
+
+                                {/* Session 2: Grapple Power */}
+                                <div className="bg-[#1e1f35] rounded-3xl p-5 md:p-8 border border-[#2a2b42] flex flex-col shadow-sm">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#6c5dd3]/10 text-[#6c5dd3]">
+                                            <FlameIcon size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl md:text-2xl font-bold">Session 2 - Grapple Power</h3>
+                                            <p className="text-sm text-[#8c8d9f]">Explosive Power & Conditioning</p>
+                                        </div>
+                                    </div>
+
+                                    <WorkoutBlock 
+                                        title="Warm up" 
+                                        colorHex="#6c5dd3"
+                                        items={[
+                                            "Walk outs x 20",
+                                            "Bird Dogs 4 each side x 15 seconds",
+                                            "Band pull aparts x 20",
+                                            "Plate or kettlebell halos 3 x 10 each side",
+                                            "Tib raises x 20",
+                                            "Single leg calf raises x 20"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="Strength" 
+                                        subtitle="3-5 sets, 2-5 reps • RPE 7-9 (Heavy) • Rest FOR AS LONG AS YOU NEED"
+                                        colorHex="#6c5dd3"
+                                        items={[
+                                            "Towel swings (try 24kg to start)",
+                                            "Weighted Chin Ups (start with 2-5kg and aim for doubles/2 reps)"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="Body Armour" 
+                                        subtitle="3-5 rounds • RPE 7-9 (Heavy) • Rest FOR AS LONG AS YOU NEED"
+                                        colorHex="#6c5dd3"
+                                        items={[
+                                            "A1 Alternate arm Kettlebell press aka the Soviet Press, 3-5 reps each arm",
+                                            "A2 40m Suitcase carry each arm",
+                                            "A3 Bulgarian Split Squats (right leg first)",
+                                            "Note: 1 round = A1 + A2 + A3 + REST"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="Power" 
+                                        subtitle="10 to 20 minutes • On the Minute (OTM)"
+                                        colorHex="#6c5dd3"
+                                        items={[
+                                            "5 double kettlebell swings start of the minute, 5 power press ups at the end of the minute",
+                                            "Keep working until power or technique drops",
+                                            "E.g. Minute 0 = Swings, minute 1 = Press ups, minute 2 = swings, minute 3 = press ups…"
+                                        ]} 
+                                    />
+                                    <WorkoutBlock 
+                                        title="Finishers" 
+                                        colorHex="#6c5dd3"
+                                        items={[
+                                            "30 second Neck Iso Hold (change position each round)",
+                                            "30 second side plank each side",
+                                            "Wind down: 1 to 5 mins breathing (No music or chill/calm only: 4s in via nose, 7s hold, 8s out via mouth like blowing through a straw)"
+                                        ]} 
+                                    />
+
+                                    <a href="https://tally.so/r/gDqYGd" target="_blank" rel="noreferrer" className="mt-auto pt-4 md:pt-6 w-full flex items-center justify-center gap-2 bg-[#6c5dd3] hover:bg-[#594ab8] text-white font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-[#6c5dd3]/20">
+                                        <ExternalLinkIcon size={20} />
+                                        Log Session
+                                    </a>
+                                </div>
+
+                                {/* Session 3: Man Minutes */}
+                                <div className="bg-[#1e1f35] rounded-3xl p-5 md:p-8 border border-[#2a2b42] flex flex-col h-fit shadow-sm">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#00c48c]/10 text-[#00c48c]">
+                                            <WindIcon size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl md:text-2xl font-bold">Man Minutes</h3>
+                                            <p className="text-sm text-[#8c8d9f]">Do this on days you feel tired instead</p>
+                                        </div>
+                                    </div>
+
+                                    <WorkoutBlock 
+                                        title="Conditioning" 
+                                        subtitle="5-10 minutes • 'Simply' work continuously"
+                                        colorHex="#00c48c"
+                                        items={[
+                                            "30s Farmers carry with a HEAVY BELL, hold like a suitcase",
+                                            "10 Goblet Squats"
+                                        ]} 
+                                    />
+
+                                    <a href="https://tally.so/r/gDqYGd" target="_blank" rel="noreferrer" className="mt-4 md:mt-6 w-full flex items-center justify-center gap-2 bg-[#00c48c] hover:bg-[#00a877] text-white font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-[#00c48c]/20">
+                                        <ExternalLinkIcon size={20} />
+                                        Log Session
+                                    </a>
+                                </div>
                             </div>
                         </section>
 
